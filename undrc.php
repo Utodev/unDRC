@@ -1,7 +1,9 @@
 
 <?php
 
+// include_once("exportSCE.php"); // Not implemented yet
 include_once("exportDSF.php");
+
 
 
 // This DAAD decompiler is made for v2.0+ of DAAD compiler, thus, will support ony games made 
@@ -15,13 +17,6 @@ include_once("exportDSF.php");
 // DRC and Maluva stuff, (C) Uto 2023 
 
 // License: GNU GPL v3.0 (see LICENSE file for details)
-
-// TODO:
-// - Extract EXTERN, SFX and INT code
-// - Detect Maluva Condacts
-// - Extract XMESSAGES
-// - use identifiers for system flags
-// - use identifiers for objects
 
 // Header of the DDB files
 
@@ -244,9 +239,10 @@ $condacts = array(
 
 // GLOBAL VARS
 $isLittleEndian = false;
-$noMaluva = false;
+$maluva = true;
+$inlineMessages = true;
+$objectIdentifiers = true;
 $auto = false;
-$noInlineMessages = false;
 $exportFormat = 'DSF';
 
 
@@ -376,50 +372,57 @@ function getMessage($opcode, $id)
 
 }
 
+
+function getMessageAt($address)
+{
+  
+  global $posTokens, $daad_to_iso8859_15, $TOK;
+  $message='';
+
+  seek($address);
+    do
+    {
+      $c = readByte();
+      if (!$posTokens) 
+        {
+          $d= $daad_to_iso8859_15[$c];
+          if ($d != 10) $message.=chr($d); else  $message .= "#n";
+        }
+      else  
+        {
+          if ($c < 128) 
+          {
+            $token_id = $c ^ 0xff - 128;
+            $thetoken = $TOK[$token_id];
+            $message.=$thetoken;
+          } 
+          else 
+          {
+            $d = $daad_to_iso8859_15[$c];
+            if ($d==0x0c) $message.= "#k";
+            else if ($d==0x0e) $message.= "#g";
+            else if ($d==0x0f) $message.= "#t";
+            else if ($d==0x0b) $message.= "#b";
+            else if ($d==0x7f) $message.= "#f";
+            else if ($d==0x0d) $message.= "#n";
+            else if ($d==0x0a) $message.= ""; // This is the mark of end of message, we will not be adding it
+            else $message.=chr($d);            
+          }
+        }
+    } while ($c != 0xF5);  // 0x0A xor 255
+    $message = str_replace(chr(13), '#n', $message);
+    $message = str_replace('"', '\"', $message);
+    return $message;
+}
+
 function getTextSection($address, $num)
 {
     $variable = array();
-    $text = '';
-    global $daad_to_iso8859_15, $TOK, $posTokens;
     for ($i = 0; $i < $num; $i++)
     {
-      $message='';
-      $text .= "/$i \""; 
-      seek($address + (2 * $i));
-      $currentTextAddress = readWord();
-      seek($currentTextAddress);
-      do
-      {
-        $c = readByte();
-        if (!$posTokens) 
-          {
-            $d= $daad_to_iso8859_15[$c];
-            if ($d != 10) $message.=chr($d); else  $message .= "\n";
-          }
-        else  
-          {
-            if ($c < 128) 
-              {
-                $token_id = $c ^ 0xff - 128;
-                $thetoken = $TOK[$token_id];
-                $message.=$thetoken;
-              } else 
-              {
-                $d = $daad_to_iso8859_15[$c];
-                if ($d==0x0c) $message.= "#k";
-                else if ($d==0x0e) $message.= "#g";
-                else if ($d==0x0f) $message.= "#t";
-                else if ($d==0x0b) $message.= "#b";
-                else if ($d==0x7f) $message.= "#f";
-                else if ($d==0x0d) $message.= ":";
-                else if ($d==0x0a) $message.= "#n";
-                else $message.=chr($d);            }
-          }
-      } while ($c != 0xF5);  // 0x0A xor 255
-      $message = str_replace(chr(13), '#n', $message);
-      $message = str_replace('"', '\"', $message);
-      //$text .= "$message\"\n";
-      $variable[$i] = $message;
+        seek($address + (2 * $i));
+        $currentTextAddress = readWord();
+        $variable[$i] = getMessageAt($currentTextAddress);
     }
     return $variable;
 }
@@ -428,13 +431,18 @@ function getTextSection($address, $num)
 
 function syntax()
 {
-    echo("Syntax: php undrc.php <DDB file> [-v] [-a] [-m] [-t]\n");
-    echo("        -v: do not try to identify Maluva condacts\n");
+    echo("Syntax: php undrc.php <DDB file> [-v] [-a] [-i] [-t]\n");
+    echo("        -m: do not try to identify Maluva condacts\n");
+    echo("        -o: do not generate automatic object identifiers\n");
+    echo("        -i: do not generate inline messages\n");
     echo("        -a: try to find DDB data in the input file\n");
     echo("        -t: save .tok file with tokens for DRC\n"); 
-    echo("        -m: don't generate inline messages\n");
+    // echo("        -sce: generate SCE output\n"); // not implemented yet
     echo ("\n");
-    echo "Output file will have same name than input file, but with DSF extension.\n";
+    echo "Notes:\n";
+    echo "- Output file will have same name than input file, but with DSF extension.\n\n";
+    echo "- unDRC can be used with modern DAAD games, but may not work fine with Aventuras AD games, specially with Aventura Original, Jabato and Cozumel. Use unDAAD instead.\n";
+    echo "- unDRC can't decompile Spectrum 128K DAAD games, as the DDB file is not stored the same way. Also, the 'auto' option would fail to find DDB data in MSX2 games..\n";
     
 
     exit(1);    
@@ -455,11 +463,22 @@ if ($argc<2) syntax();
 
 for ($i=2; $i<$argc; $i++)
 {
-    if ($argv[$i]=='-v') $noMaluva = true;
+    if ($argv[$i]=='-m') $maluva = false;
     else if ($argv[$i]=='-a') $auto = true;
     else if ($argv[$i]=='-t') $dumpTokens = true;
-    else if ($argv[$i]=='-m') $noInlineMessages = true;
+    else if ($argv[$i]=='-i') $inlineMessages = false;
+    else if ($argv[$i]=='-o') $objectIdentifiers = false;
+    else error('Invalid parameter: '.$argv[$i]);
+    /* Not implemented yet
+    else if ($argv[$i]=='-sce') 
+    {
+      $exportFormat = 'SCE';
+      $dumpTokens = true;
+      $inlineMessages = false;
+      $maluva = false;
+    }
     else error("Unknown option: $argv[$i]");
+    */
     
 }
 
@@ -545,13 +564,10 @@ $HEADER['fileLength'] = $fileLength;
 
 
 
-// CTL Section
-//writeText("\n\n/CTL; Control\n");
-//writeText("_\n\n");
 
 // TOKENS
 
-seek ($posTokens+2) ;  // It seems actual token table starts two byte above the real offset
+seek ($posTokens+1) ;  // It seems actual token table starts 1 byte above the real offset
 $tokenCount = 0;
 $token = '';
 while ($tokenCount<128)  // There should be exactly 128 tokens
@@ -597,31 +613,9 @@ while (1)
 }
 
 
-/*
-foreach($words as $wordType=>$wordTypeArray)
-{
-  ksort($wordTypeArray);
-  $wordTypeText = $wordTypes[$wordType];
-  writeText("\n\n; " .strtoupper($wordTypeText)."S\n");
-  foreach($wordTypeArray as $id=>$wordArray)
-  {
-    foreach($wordArray as $word)
-    {
-      writeText(str_pad($word,8) . str_pad($wordTypeText,12). "$id\n");
-    }
-   }
-}
-*/
-
-
-
-
 // The several /*TX  sections have the same format, so using a single function to decode them
 
 
-//printSeparator();
-//writeText("\n\n/STX    ;System Messages\n");
-//writeText(getTextSection($posSystemMessages, $numSystemMessages, $STXData));
 $STX = getTextSection($posSystemMessages, $numSystemMessages);
 $MTX = getTextSection($posUserMessages, $numUserMessages);
 $LTX = getTextSection($posLocations, $numLocs);
@@ -629,14 +623,10 @@ $OTX = getTextSection($posObjects, $numObjs);
 
 
 
- // CONNECTIONS
- // printSeparator();
- //writeText("/CON    ;Conections\n");
  
  for ($i = 0; $i < $numLocs; $i++)
  {
    $CON[$i] =array();
-   //writeText("/$i\n");
    seek($posConnections + (2 * $i));
    $currentConnectionsPosition = readWord();
    seek($currentConnectionsPosition);
@@ -645,18 +635,13 @@ $OTX = getTextSection($posObjects, $numObjs);
      if (isset($VOC[0][$c])) $word = $VOC[0][$c][0];
      else if ((isset($VOC[2][$c])) && ($c<20)) $word = $VOC[2][$c][0];
      $CON[$i][$c] = readByte();
-     //writeText("$word " . readByte() . "\n");
    } 
  }
 
  // OBJECT DATA
- //printSeparator();
- //writeText("/OBJ      ;Objects data\n");
- //writeText(";obj.no   initially@  weight   c w  5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0    noun    adjective\n");
  for ($i = 0; $i < $numObjs; $i++)
  {
     $OBJ[$i] = array();
-    //writeText(str_pad("/$i ", 10));
     // initially at
     seek($posInitialyAt + $i);
     $loc = readByte();
@@ -668,23 +653,13 @@ $OTX = getTextSection($posObjects, $numObjs);
     // Weight
     $attr = readByte(); 
     $weigth = $attr & 0x3F;
-    //writeText(str_pad($weigth, 8));
     $OBJ[$i]['weight'] = $weigth;
     $OBJ[$i]['container'] = ($attr & 0x40) ? 1 : 0;
     $OBJ[$i]['wearable'] = ($attr & 0x80) ? 1 : 0;
-    // Container
-    //$container = ($attr & 0x40) ? 'Y' : '_';
-    //writeText("$container ");
-    // Wearable
-    //$wearable = ($attr & 0x80) ? 'Y' : '_';
-    //writeText("$wearable  ");
     // User attributes
     seek($posObjectUserAttributes + ($i * 2));
     $userAttrs = readWord();
     $OBJ[$i]['userAttrs'] = $userAttrs;
-    //for ($j=15;$j>=0;$j--)
-   //        writeText(($userAttrs& (1<<$j)) ? 'Y ':'_ ');
-    //writeText("   ");
 
    // noun & adjective
    seek($posObjectsVocabulary + ($i *2));
@@ -692,8 +667,6 @@ $OTX = getTextSection($posObjects, $numObjs);
    $adject_id = readByte();
    $OBJ[$i]['noun'] = $noun_id;
    $OBJ[$i]['adjective'] = $adject_id;
-   //writeText(str_pad($VOC[2][$noun_id][0], 7) .' ');
-   //if ($adject_id == 255) writeText("_\n"); else writeText($VOC[3][$adject_id][0]. "\n");
  }
 
 
@@ -701,9 +674,8 @@ $OTX = getTextSection($posObjects, $numObjs);
  $PRO = array();
  for ($i=0;$i<$numProcesses;$i++)
  {
- //  printSeparator();
-//   writeText("/PRO $i\n"); 
 
+   $PRO[$i] = array();
    for ($entry = 0; ; $entry++)
    {
      $entryOffsetPosition = $posProcesses + (2 * $i);
@@ -713,26 +685,12 @@ $OTX = getTextSection($posObjects, $numObjs);
      seek($condactsOffset);
      $verbCode = readByte();
      
-     //writeText("\n");
      if ($verbCode == 0)  break; // Process end
 
      $PRO[$i][$entry]['verb'] = $verbCode;
 
-     
-     // Entry verb
-/*     if ($verbCode == 255) writeText(str_pad("> _", 8)); else
-     {
-       if (isset($VOC[0][$verbCode])) $word = $VOC[0][$verbCode][0];
-       else if ((isset($VOC[2][$verbCode])) && ($verbCode<20)) $word = $VOC[2][$verbCode][0];
-       else $word = "?";
-       writeText(str_pad("> $word", 8));
-     }
-     */
-     
-
      $nounCode = readByte();
      $PRO[$i][$entry]['noun'] = $nounCode;
-     //writeText(str_pad( ($nounCode == 255) ? "_" : $VOC[2][$nounCode][0], 8));
      $condactsPos = readWord();
      seek($condactsPos); 
      // Condacts
@@ -762,6 +720,16 @@ $OTX = getTextSection($posObjects, $numObjs);
        {
          $val = readByte();
          $PRO[$i][$entry]['condacts'][$condactNum]['params'][$j] = $val;
+       }
+
+       if (($maluva) && ($opcode==EXTERN_OPCODE))
+       {
+        if (in_array($val, array(XMES, XBEEP))) // Get the third paramteter for XMESSAGE
+        {
+            $val = readByte();
+            $PRO[$i][$entry]['condacts'][$condactNum]['params'][2] = $val;
+        }
+
        }
 
        $c = readByte();
@@ -794,13 +762,13 @@ $OTX = getTextSection($posObjects, $numObjs);
    $dataOutput['OTX'] = $OTX;
    $dataOutput['MTX'] = $MTX;
    $dataOutput['CON'] = $CON;
-
-
-
    
+  file_put_contents('dataOutput.txt', var_export($dataOutput, true));
+
    switch($exportFormat)
    {
-    case 'DSF':   $output = generateSourceCode($dataOutput, $noInlineMessages, $noMaluva, $dumpTokens); break;
+    case 'DSF':   $output = generateDSF($dataOutput, $inlineMessages, $maluva, $dumpTokens, $objectIdentifiers); break;
+    // case 'SCE':   $output = generateSCE($dataOutput, $inlineMessages, $maluva, $dumpTokens); break; // Not implemented yet
    }
 
    $outputFileName =  replaceExtension($filename, $exportFormat);

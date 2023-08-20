@@ -2,12 +2,28 @@
 
 $output = '';
 
+define ('OFUSCATE_VALUE', 0xFF);
+
 define('MAX_SYSMESS',62);
 define('MAX_DIRECTION', 20);
 define('MESSAGE_OPCODE',38);
 define('SYSMESS_OPCODE',54);
 define('MES_OPCODE', 77);
 define('DESC_OPCODE', 19);
+define('EXTERN_OPCODE', 61);
+
+// Maluva commands
+define('XPICTURE',0);
+define('XSAVE',1);
+define('XLOAD',2);
+define('XMES', 3); 
+define('XPART', 4);
+define('XBEEP', 5);
+define('XSPLITSCR', 6);
+define('XUNDONE',7);    
+define('XNEXTCLS',8);
+define('XNEXTRESET',9);
+define('XSPEED',10);
 $messageOpcodes = array(MESSAGE_OPCODE, SYSMESS_OPCODE, MES_OPCODE, DESC_OPCODE);
 
 
@@ -22,7 +38,9 @@ $languages = array(
     0 => "English",
     1 => "Spanish"
     );
-    
+
+$systemFlagsNames = array ("fDark"=>0,"fObjectsCarried"=>1,"fGFlags"=>29,"fScore"=>30,"fTurns"=>31,"fTurnsHi"=>32,"fVerb"=>33,"fNoun"=>34,"fAdject1"=>35,"fAdverb"=>36,"fMaxCarr"=>37,"fPlayer"=>38,"fPrep"=>43,"fNoun2"=>44,"fAdject2"=>45,"fCPronounNoun"=>46,"fCPronounAdject"=>47,"fTimeout"=>48,"fTimeoutFlags"=>49,"fDoallObjNo"=>50,"fRefObject"=>51,"fStrength"=>52,"fObjFlags"=>53,"fRefObjLoc"=>54,"fRefObjWeight"=>55,"fRefObjIsContainer"=>56,"fRefObjisWearable"=>57,"fRefObjAttr1"=>58,"fRefObjAttr2"=>59,"fInkeyKey1"=>60,"fInkeyKey2"=>61,"fScreenMode"=>62,"fCurrentWindow"=>63);
+$objectNames = array();    
 
 $condactWithVocabularyParameter = array(
 //      array(param.no => wordType)
@@ -33,7 +51,95 @@ $condactWithVocabularyParameter = array(
     "70"=>array(0 => 3), // ADJECT2
     "68"=>array(0 => 4)  // PREP
 );
+
+$condactsWithFlagnoParameter = array (
+    "27"=>array(0), // DPRINT
+    "47"=>array(0), // SET
+    "48"=>array(0), // CLEAR
+    "49"=>array(0), // PLUS
+    "50"=>array(0), // MINUS
+    "51"=>array(0), // LET
+    "53"=>array(0), // PRINT
+    "63"=>array(0), // RAMLOAD
+    "71"=>array(0,1), // ADD
+    "72"=>array(0,1), // SUB
+    "76"=>array(0,1), // SAME
+    "79"=>array(0), // NOTEQ
+    "80"=>array(0,1), // NOTSAME
+    "89"=>array(1), // WEIGH
+    "94"=>array(1), // WEIGHT
+    "95"=>array(1), // RANDOM
+    "106"=>array(0), // MOVE
+    "112"=>array(0,1), // BIGGER
+    "113"=>array(0,1), // SMALLER
+    "119"=>array(1), // COPYOF
+    "123"=>array(0), // COPYOF
+    "125"=>array(0,1), // COPYFF
+    "126"=>array(0,1), // COPYBF
+);
+
+$condactsWithObjnoParameter = array (
+        "4"=>array(0), // PRESENT
+        "5"=>array(0), // ABSENT
+        "6"=>array(0), // WORN
+        "7"=>array(0), // NOTWORN
+        "8"=>array(0), // CARRIED
+        "9"=>array(0), // NOTCARR
+        "39"=>array(0), // REMOVE
+        "40"=>array(0), // GET
+        "41"=>array(0), // DROP
+        "42"=>array(0), // WEAR
+        "43"=>array(0), // DESTROY
+        "44"=>array(0), // CREATE
+        "45"=>array(0,1), // SWAP
+        "46"=>array(0), // PLACE
+        "55"=>array(0), // ISAT
+        "56"=>array(0), // SETCO
+        "88"=>array(0), // ISNOTAT
+        "89"=>array(0), // WEIGH
+        "90"=>array(0), // PUTIN
+        "91"=>array(0), // TAKEOUT
+        "119"=>array(0), // COPYOF
+        "121"=>array(0,1), // COPYOO
+        "123"=>array(1), // COPYFO
+);
+
     
+
+function getXmessageByOffset($offset, $machineName)
+{
+    $size = 0;
+    switch ($machineName) 
+    {
+        case 'ZX'  : 
+        case 'MSX' : 
+        case 'PCW' : 
+        case 'PC'  : $size= 64; break; // For PC, it's safe to assume it's PCDAAD or we would have never got here, so it's 64
+        case 'MSX2': 
+        case 'HTML': $size= 16; break; 
+        case 'CPC' : 
+        case 'C64' : 
+        case 'CP4' : $size= 2; break;      
+        
+        default: $size = 0;
+    }
+    $size  = $size * 1024; // Convert to bytes
+    $filename = floor($offset / $size);
+    $finaloffset = $offset % $size;
+    $extension = ($machineName == 'C64' || $machineName == 'CP4') ? '' : 'XMB';
+    $filename = $filename . '.' . $extension; 
+
+    if (!file_exists($filename))
+        return "<File $filename not found - XMESSAGE extraction could not be performed>";
+
+    $filehandle = fopen($filename, "rb");
+    fseek($filehandle, $finaloffset);
+    $xmessage = fread($filehandle, 512);
+    fclose($filehandle);
+    
+    return "<XMESSAGE extraction not yet implemented>";
+    
+}
 
 function prettyHex($num)
 {
@@ -70,9 +176,45 @@ function writeText($text)
     $output .= $text;
 }
 
-function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
+
+function getObjectIdentifier($message)
 {
-    global $wordTypes, $specialLocs, $condacts, $languages,$output,$condactWithVocabularyParameter, $messageOpcodes;
+
+    $message = str_replace(' ', '', ucwords($message));
+    $newmessage = '';
+    // remove non standar characters
+    for ($i=0;$i<strlen($message);$i++)
+        if 
+        (
+             ((($message[$i])>='A') && (($message[$i])<='Z'))
+             ||
+             ((($message[$i])>='a') && (($message[$i])<='z'))
+             ||
+             ((($message[$i])>='0') && (($message[$i])<='9'))
+        ) $newmessage.= $message[$i];
+       
+    // CamelCase
+    if ($newmessage!='') return "o$newmessage"; else return "";
+}
+
+function addObjectIdentifier($mesno, $message)
+{
+    global $objectNames;
+    $objectIdentifier = getObjectIdentifier($message);
+    // Avoid conflict if two objects have the same description
+    $i = 2;
+    $currentIdentifier = $objectIdentifier;
+    while (array_key_exists($currentIdentifier, $objectNames))
+    {
+        $currentIdentifier .= $i;
+        $i++;
+    }
+    if ($currentIdentifier != '') $objectNames[$currentIdentifier] = $mesno;
+}
+
+function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfiers)
+{
+    global $wordTypes, $specialLocs, $condacts, $languages,$output,$condactWithVocabularyParameter, $condactsWithFlagnoParameter, $condactsWithObjnoParameter, $messageOpcodes, $systemFlagsNames, $objectNames;
 
     extract($data);
     extract($HEADER);
@@ -112,7 +254,24 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
 
     // CTL
     printSeparator();
-    writeText("/CTL\n_\n");
+    writeText("/CTL\n_\n\n");
+    foreach ($systemFlagsNames as $flagName=>$flagNumber)
+        writeText("#define $flagName $flagNumber\n");
+    
+    if ($objectIdenfiers) 
+    {
+        writeText("\n; Object identifiers\n");
+        foreach($OTX as $mesno=>$message)
+        {
+            addObjectIdentifier($mesno, $message);
+        }
+        foreach ($objectNames as $objectName=>$objectNumber)
+        writeText("#define $objectName $objectNumber\n");
+    
+    }
+    
+
+    
 
     // TOK - not in DSF format - but export TOK file if requested
     if ($dumpTokens) 
@@ -135,13 +294,13 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
         writeText("\n\n; " .strtoupper($wordTypeText)."S\n");
         foreach($wordTypeArray as $id=>$wordArray)
             foreach($wordArray as $word)
-                writeText(str_pad($word,8) . str_pad($wordTypeText,12). "$id\n");
+                writeText(str_pad($word,8) . str_pad($id,5). "$wordTypeText\n");
     }
 
     // If there's going to be inline Messages we need to determine which among all messages, system messages and descriptions
     // are used inline. To do that, we will check which descriptions, messages and system messges are used without indirection
     // in the processes. Those can be used inline. First System messages are an exception.
-    if (!$noInlineMessages)
+    if ($inlineMessages)
     {
         $usedSYSMES = array();
         $usedUSRMES = array();
@@ -152,7 +311,9 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
                 {
                     // Please notice  we dont checkj for indirection in the opcode, if there is indirection, the opcode won't macth 
                     // valid opcode and will be ignored, just as we want to be ignored.
-                    switch ($condact['opcode']) 
+                    $opcode = $condact['opcode'];
+                    if ($condact['indirection']) continue; // No reference to message if it's indirection
+                    switch ($opcode) 
                     {
                         case SYSMESS_OPCODE:
                             $mesno = $condact['params'][0];
@@ -176,7 +337,7 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
     writeText("/STX  ; -- System messages\n");   
     foreach($STX as $mesno=>$message)
     {
-        if (!$noInlineMessages && in_array($mesno, $usedSYSMES)) break;
+        if ($inlineMessages && in_array($mesno, $usedSYSMES)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
@@ -185,7 +346,7 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
     writeText("/MTX  ; -- User messages\n");   
     foreach($MTX as $mesno=>$message)
     {
-        if (!$noInlineMessages && in_array($mesno, $usedUSRMES)) break;
+        if ($inlineMessages && in_array($mesno, $usedUSRMES)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
@@ -196,14 +357,16 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
     foreach($OTX as $mesno=>$message)
     {
         writeText("/$mesno \"$message\"\n");
+        if ($objectIdenfiers) addObjectIdentifier($mesno, $message);
     }
 
     // LTX
     printSeparator();
     writeText("/LTX  ; -- Locations\n");   
+    
     foreach($LTX as $mesno=>$message)
     {
-        if (!$noInlineMessages && in_array($mesno, $usedDESC)) break;
+        if ($inlineMessages && in_array($mesno, $usedDESC)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
@@ -297,10 +460,12 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
                     {
                        if ($indirection) error("Indirection found in a condact whose parameter is a vocabulary word: [$mnemonic] at process $procno\n");
                        $param = $VOC[$condactWithVocabularyParameter[$opcode][$i]][$param][0];
-                    }                    
+                    }          
+                    
+                  
 
                     // If it's a message condact, and inline messages are allowed, replace message number with the corresponding message
-                    if ((!$noInlineMessages) && (in_array($opcode, $messageOpcodes) && (!$indirection))) // Don't make inline messages if asked so, or if there's indirection
+                    if (($inlineMessages) && (in_array($opcode, $messageOpcodes) && (!$indirection))) // Don't make inline messages if asked so, or if there's indirection
                     {
                         switch($opcode)
                         {
@@ -315,6 +480,7 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
                             case DESC_OPCODE:
                                 $param = '"' . $LTX[$param] . '"' . ' ; DESC ' . $param;
                                 $opcode = MES_OPCODE;
+                                break;
                             case SYSMESS_OPCODE:
                                 if ($param > MAX_SYSMESS) 
                                 {
@@ -325,10 +491,90 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
                         }
                     }
 
-                    if ($indirection) $param = "@" . $param;
+                    // replace flag number with the corresponding flag name if exists
+                    if (array_key_exists($opcode, $condactsWithFlagnoParameter) && (in_array($i, $condactsWithFlagnoParameter[$opcode])))
+                    {
+                        $res  = array_search($param, $systemFlagsNames);                          
+                        if ($res !== false) $param = $res;
+                    }
+                    // replace flag number with the corresponding flag name if exists, when indirection
+                    if (($indirection) && ($i==0))
+                    {
+                        $res  = array_search($param, $systemFlagsNames);                          
+                        if ($res !== false) $param = $res;
+                    }
+                    // replace object number with corresponding object number if exists
+                    if (array_key_exists($opcode, $condactsWithObjnoParameter) && (in_array($i, $condactsWithObjnoParameter[$opcode])) &&(($i>0)||((!$indirection))))
+                    {
+                        $res  = array_search($param, $objectNames);                          
+                        if ($res !== false) $param = $res;
+                    }
+                  
+
+
+                    if (($indirection) && ($i==0)) $param = "@" . $param;
                     $paramString .= "$param ";
                 }
                 $mnemonic = $condacts[$opcode][1];
+
+                // If using Maluva, replace EXTERN calls with MALUVA pseudocondacts
+                if ($maluva && ($opcode == EXTERN_OPCODE))
+                {
+                    $param0 = $condactData['params'][0];
+                    $param1 = $condactData['params'][1];
+                    if (in_array($param1, array(XMES, XBEEP))) $param2 = $condactData['params'][2];
+
+                    switch ($param1)
+                    {
+                        case XPICTURE:
+                            $mnemonic = "XPICTURE";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;
+                        case XSAVE:
+                            $mnemonic = "XSAVE";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;
+                        case XLOAD:
+                            $mnemonic = "XLOAD";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;
+                        case XMES:
+                            $mnemonic = "XMES";
+                            $offset = $param0 + 256 * $param2;
+                            $xmessage = getXmessageByOffset($offset, $machineName);
+                            $paramString = " \"$xmessage\" ; EXTERN $paramString [Offset: $offset]";
+                            break;
+                        case XPART:
+                            $mnemonic = "XPART";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;
+                        case XBEEP: 
+                            $mnemonic = "XBEEP";                           
+                            $paramString = ($indirection?'@':'') . "$param0 $param2 ; EXTERN $paramString";
+                            break;
+                        case XSPLITSCR:
+                            $mnemonic = "XSPLITSCR";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;
+                        case XUNDONE:
+                            $mnemonic = "XUNDONE";
+                            $paramString = "; EXTERN $paramString";
+                            break;
+                        case XNEXTCLS:
+                            $mnemonic = "XNEXTCLS";
+                            $paramString = "; EXTERN $paramString";
+                            break;
+                        case XNEXTRESET:
+                            $mnemonic = "XNEXTRESET";
+                            $paramString = "; EXTERN $paramString";
+                            break;
+                        case XSPEED:
+                            $mnemonic = "XSPEED";
+                            $paramString = ($indirection?'@':'') . "$param0 ; EXTERN $paramString";
+                            break;                   
+                    }
+                    
+                }               
                 writeText("$mnemonic $paramString\n");
             }
             writeText("\n\n");
@@ -343,42 +589,3 @@ function generateSourceCode($data, $noInlineMessages, $noMaluva, $dumpTokens)
     return $output;
 
 }
-
-/*         if (isset($wordParamTypes[$opcode][$j]) && isset($VOC[$wordParamTypes[$opcode][$j]][$val][0])) 
-         {
-            if ($indirection) error("Indirection found in a condact whose parameter is a vocabulary word: [$mnemonic] at entry $entry of process $i\n");
-            $params[$j] = $VOC[$wordParamTypes[$opcode][$j]][$val][0];
-         }
-         else  
-         {
-            if ((!$noInlineMessages) && (in_array($opcode, $messageOpcodes)&&(!$indirection))) // Don't make inline messages if asked so, or if it's not a "message opcode"
-            {
-                if (($opcode != $SYSMESS_OPCODE) || (($opcode == $SYSMESS_OPCODE) && ($val>MAX_SYSMESS))) // Also, don't replace original system messages
-                {
-                    $message = getMessage($opcode, $val);
-                    if ($message != '')  
-                    {
-                        $mnemonic = 'MES';
-                        if ((strlen($message)>2) && (substr($message,-2)=='#na')) 
-                        {
-                            $message = substr($message,0,-2);
-                            $mnemonic = 'MESSAGE';
-                        }
-                        $val = "\"$message\"";
-                    }   
-                }
-                else // If it's an original sysmess, we add the code, but as a comment
-                {
-                    $message = getMessage($opcode, $val);
-                    $val = $val . "; $message";
-                }
-            }
-            $params[$j] = ((($indirection) && ($j==0) ? "@$val" : "$val"));
-         }
-       }
-       
-       writeText("        $mnemonic ");
-       for ($j = 0; $j < $condacts[$opcode][0]; $j++) writeText($params[$j]." ");
-       writeText("\n");
-*/
-       
