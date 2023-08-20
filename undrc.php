@@ -4,6 +4,7 @@
 // include_once("exportSCE.php"); // Not implemented yet
 include_once("exportDSF.php");
 
+define('VERSION','1.0');
 
 
 // This DAAD decompiler is made for v2.0+ of DAAD compiler, thus, will support ony games made 
@@ -376,7 +377,8 @@ function getMessage($opcode, $id)
 function getMessageAt($address)
 {
   
-  global $daad_to_iso8859_15, $TOK;
+  global 
+  $daad_to_iso8859_15, $TOK;
   $message='';
 
   seek($address);

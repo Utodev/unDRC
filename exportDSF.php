@@ -253,7 +253,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
     extract($HEADER);
 
     // Header data
-    writeText("; Source code by unDRC, DAAD v2.0+ Decompiler\n");
+    writeText("; Source code by unDRC ".VERSION.", DAAD v2.0+ Decompiler\n");
     writeText("; Extraction date: " . date('Y-m-d H:i:s') . "\n");
     writeText("; Machine : $machineName\n");
     writeText("; Language: " . $languages[$lang] . "\n");
