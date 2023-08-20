@@ -376,38 +376,30 @@ function getMessage($opcode, $id)
 function getMessageAt($address)
 {
   
-  global $posTokens, $daad_to_iso8859_15, $TOK;
+  global $daad_to_iso8859_15, $TOK;
   $message='';
 
   seek($address);
     do
     {
-      $c = readByte();
-      if (!$posTokens) 
+        $c = readByte();
+        if ($c < 128) 
         {
-          $d= $daad_to_iso8859_15[$c];
-          if ($d != 10) $message.=chr($d); else  $message .= "#n";
-        }
-      else  
+          $token_id = $c ^ 0xff - 128;
+          $thetoken = $TOK[$token_id];
+          $message.=$thetoken;
+        } 
+        else 
         {
-          if ($c < 128) 
-          {
-            $token_id = $c ^ 0xff - 128;
-            $thetoken = $TOK[$token_id];
-            $message.=$thetoken;
-          } 
-          else 
-          {
-            $d = $daad_to_iso8859_15[$c];
-            if ($d==0x0c) $message.= "#k";
-            else if ($d==0x0e) $message.= "#g";
-            else if ($d==0x0f) $message.= "#t";
-            else if ($d==0x0b) $message.= "#b";
-            else if ($d==0x7f) $message.= "#f";
-            else if ($d==0x0d) $message.= "#n";
-            else if ($d==0x0a) $message.= ""; // This is the mark of end of message, we will not be adding it
-            else $message.=chr($d);            
-          }
+          $d = $daad_to_iso8859_15[$c];
+          if ($d==0x0c) $message.= "#k";
+          else if ($d==0x0e) $message.= "#g";
+          else if ($d==0x0f) $message.= "#t";
+          else if ($d==0x0b) $message.= "#b";
+          else if ($d==0x7f) $message.= "#f";
+          else if ($d==0x0d) $message.= "#n";
+          else if ($d==0x0a) $message.= ""; // This is the mark of end of message, we will not be adding it
+          else $message.=chr($d);            
         }
     } while ($c != 0xF5);  // 0x0A xor 255
     $message = str_replace(chr(13), '#n', $message);

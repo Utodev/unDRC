@@ -105,6 +105,40 @@ $condactsWithObjnoParameter = array (
 );
 
     
+function decodeXMessage($xmessage)
+{
+    
+    global $daad_to_iso8859_15, $TOK;
+    $message='';
+    $i = 0;
+    do
+    {
+        $c = ord($xmessage[$i]);
+        $i++;
+        if ($c < 128) 
+        {
+            $token_id = $c ^ OFUSCATE_VALUE - 128;
+            $thetoken = $TOK[$token_id];
+            $message.=$thetoken;
+        } 
+        else 
+        {
+            $d = $daad_to_iso8859_15[$c];
+            if ($d==0x0c) $message.= "#k";
+            else if ($d==0x0e) $message.= "#g";
+            else if ($d==0x0f) $message.= "#t";
+            else if ($d==0x0b) $message.= "#b";
+            else if ($d==0x7f) $message.= "#f";
+            else if ($d==0x0d) $message.= "#n";
+            else if ($d==0x0a) $message.= ""; // This is the mark of end of message, we will not be adding it
+            else $message.=chr($d);            
+        }
+    } while ($c != 0xF5);  // 0x0A xor 255
+    $message = str_replace(chr(13), '#n', $message);
+    $message = str_replace('"', '\"', $message);
+    return $message;
+}
+
 
 function getXmessageByOffset($offset, $machineName)
 {
@@ -136,9 +170,8 @@ function getXmessageByOffset($offset, $machineName)
     fseek($filehandle, $finaloffset);
     $xmessage = fread($filehandle, 512);
     fclose($filehandle);
-    
-    return "<XMESSAGE extraction not yet implemented>";
-    
+    $xmessage = decodeXMessage($xmessage);   
+    return $xmessage;   
 }
 
 function prettyHex($num)
@@ -503,7 +536,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
                         $res  = array_search($param, $systemFlagsNames);                          
                         if ($res !== false) $param = $res;
                     }
-                    // replace object number with corresponding object number if exists
+                    // replace object number with corresponding object identifier if exists
                     if (array_key_exists($opcode, $condactsWithObjnoParameter) && (in_array($i, $condactsWithObjnoParameter[$opcode])) &&(($i>0)||((!$indirection))))
                     {
                         $res  = array_search($param, $objectNames);                          
