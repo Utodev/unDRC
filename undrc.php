@@ -443,6 +443,7 @@ function syntax()
     echo "- Output file will have same name than input file, but with DSF extension.\n\n";
     echo "- unDRC can be used with modern DAAD games, but may not work fine with Aventuras AD games, specially with Aventura Original, Jabato and Cozumel. Use unDAAD instead.\n";
     echo "- unDRC can't decompile Spectrum 128K DAAD games, as the DDB file is not stored the same way. Also, the 'auto' option would fail to find DDB data in MSX2 games..\n";
+    echo "\n\nPlease read README file at https://github.com/Utodev/unDRC for more detailed information.\n"
     
 
     exit(1);    
