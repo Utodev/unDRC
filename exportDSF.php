@@ -330,9 +330,11 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
                 writeText(str_pad($word,8) . str_pad($id,5). "$wordTypeText\n");
     }
 
+
     // If there's going to be inline Messages we need to determine which among all messages, system messages and descriptions
     // are used inline. To do that, we will check which descriptions, messages and system messges are used without indirection
     // in the processes. Those can be used inline. First System messages are an exception.
+    /*
     if ($inlineMessages)
     {
         $usedSYSMES = array();
@@ -364,13 +366,14 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
                     }
                 }
     }
+    */
    
     // STX
     printSeparator();
     writeText("/STX  ; -- System messages\n");   
     foreach($STX as $mesno=>$message)
     {
-        if ($inlineMessages && in_array($mesno, $usedSYSMES)) break;
+        //if ($inlineMessages && in_array($mesno, $usedSYSMES)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
@@ -379,7 +382,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
     writeText("/MTX  ; -- User messages\n");   
     foreach($MTX as $mesno=>$message)
     {
-        if ($inlineMessages && in_array($mesno, $usedUSRMES)) break;
+        //if ($inlineMessages && in_array($mesno, $usedUSRMES)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
@@ -399,7 +402,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
     
     foreach($LTX as $mesno=>$message)
     {
-        if ($inlineMessages && in_array($mesno, $usedDESC)) break;
+        //if ($inlineMessages && in_array($mesno, $usedDESC)) break;
         writeText("/$mesno \"$message\"\n");
     }
 
