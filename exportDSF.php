@@ -442,7 +442,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
         $adjective = str_pad($objData['adjective'], 8, " ", STR_PAD_LEFT);
         if ($adjective == 255) $adjective = "_";
         else
-        if (isset($VOC[3][$adjective])) $adjective = $VOC[2][$adjective][0]; else $adjective = "??$adjective";
+        if (isset($VOC[3][$adjective])) $adjective = $VOC[3][$adjective][0]; else $adjective = "??$adjective";
         $adjective = str_pad($adjective, 8, " ", STR_PAD_LEFT);
         
        
