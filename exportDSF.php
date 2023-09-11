@@ -417,7 +417,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
         {
             if (isset($VOC[0][$direction])) $word = $VOC[0][$direction][0];
             else if ((isset($VOC[2][$direction])) && ($direction<MAX_DIRECTION)) $word = $VOC[2][$direction][0];
-            else $word = "??$direction";
+            else $word = "??[$direction]";
             writeText("$word $locno2\n");
         }
     }
@@ -439,13 +439,13 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
         $noun = $objData['noun'];
         if ($noun == 255) $noun = "_";
         else
-        if (isset($VOC[2][$noun])) $noun = $VOC[2][$noun][0]; else $noun = "??$noun";
+        if (isset($VOC[2][$noun])) $noun = $VOC[2][$noun][0]; else $noun = "??[$noun]";
         $noun = str_pad($noun, 8, " ", STR_PAD_LEFT);
 
         $adjective = $objData['adjective'];
         if ($adjective == 255) $adjective = "_";
         else
-        if (isset($VOC[3][$adjective])) $adjective = $VOC[3][$adjective][0]; else $adjective = "??$adjective";
+        if (isset($VOC[3][$adjective])) $adjective = $VOC[3][$adjective][0]; else $adjective = "??[$adjective]";
         $adjective = str_pad($adjective, 8, " ", STR_PAD_LEFT);
         
        
@@ -472,11 +472,11 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
             if ($verb == 255) $verb = "_";
             else if (isset($VOC[0][$verb])) $verb = $VOC[0][$verb][0]; 
             else if ((isset($VOC[2][$verb])) && ($verb<MAX_DIRECTION)) $verb = $VOC[2][$verb][0];
-            else $verb = "??$verb";
+            else $verb = "??[$verb]";
 
             if ($noun == 255) $noun = "_";
             else if (isset($VOC[2][$noun])) $noun = $VOC[2][$noun][0]; 
-            else $noun = "??$noun";
+            else $noun = "??[$noun]";
             writeText("> " . str_pad($verb, 6, " ", STR_PAD_RIGHT) . " " . str_pad($noun, 6, " ", STR_PAD_RIGHT). " ");
 
             $entryCondacts = $entry['condacts'];
