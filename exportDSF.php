@@ -455,7 +455,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
            $userAttrsStr .= ($userAttrs& (1<<$j)) ? 'Y ':'_ ';
         
 
-        writeText("$objno     $initiallyAt $weight   $container$wearable $userAttrsStr $noun $adjective\n");
+        writeText("/$objno     $initiallyAt $weight   $container$wearable $userAttrsStr $noun $adjective\n");
     }
 
  
