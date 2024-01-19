@@ -9,6 +9,7 @@ define('MAX_DIRECTION', 20);
 define('MESSAGE_OPCODE',38);
 define('SYSMESS_OPCODE',54);
 define('MES_OPCODE', 77);
+define('MES2_OPCODE', 9 + 512);
 define('DESC_OPCODE', 19);
 define('EXTERN_OPCODE', 61);
 
@@ -24,7 +25,7 @@ define('XUNDONE',7);
 define('XNEXTCLS',8);
 define('XNEXTRESET',9);
 define('XSPEED',10);
-$messageOpcodes = array(MESSAGE_OPCODE, SYSMESS_OPCODE, MES_OPCODE, DESC_OPCODE);
+$messageOpcodes = array(MESSAGE_OPCODE, SYSMESS_OPCODE, MES_OPCODE, DESC_OPCODE, MES2_OPCODE);
 
 
 $specialLocs = array(
@@ -76,6 +77,7 @@ $condactsWithFlagnoParameter = array (
     "123"=>array(0), // COPYOF
     "125"=>array(0,1), // COPYFF
     "126"=>array(0,1), // COPYBF
+    
 );
 
 $condactsWithObjnoParameter = array (
@@ -247,10 +249,11 @@ function addObjectIdentifier($mesno, $message)
 
 function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfiers)
 {
-    global $wordTypes, $specialLocs, $condacts, $languages,$output,$condactWithVocabularyParameter, $condactsWithFlagnoParameter, $condactsWithObjnoParameter, $messageOpcodes, $systemFlagsNames, $objectNames;
+    global $wordTypes, $specialLocs, $condacts, $prefixedCondacts,  $languages,$output,$condactWithVocabularyParameter, $condactsWithFlagnoParameter, $condactsWithObjnoParameter, $messageOpcodes, $systemFlagsNames, $objectNames;
 
     extract($data);
     extract($HEADER);
+    $v3code = $version == 3;
 
     // Header data
     writeText("; Source code by unDRC ".VERSION.", DAAD v2.0+ Decompiler\n");
@@ -260,10 +263,12 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
     
     writeText("\n; Header Info");
     writeText("\n; ===========\n");
+    writeText("; DAAD version: $version\n");
     writeText("; Objects: $numObjs\n");
     writeText("; Locations: $numLocs\n");
     writeText("; User messages: $numUserMessages\n");
     writeText("; System messages: $numSystemMessages\n");
+    if ($v3code) writeText("; User 2 messages: $numUser2Messages\n");
     writeText("; Processes: $numProcesses\n");
     writeText("; Base address: " . prettyHex($baseAddress) ."\n");
     writeText('; Endianess: ' . ($isLittleEndian ? 'little' : 'big') . " endian\n");
@@ -282,6 +287,7 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
     writeText("; Objects vocabulary: " . prettyHex($posObjectsVocabulary) ."\n");
     writeText("; Object attributes: " . prettyHex($posObjectAttributes) ."\n");
     writeText("; User object attributes: " . prettyHex($posObjectUserAttributes) ."\n");
+    if ($v3code) writeText("; User 2 messages: " . prettyHex($posUser2Messages) ."\n");
     writeText("; File length: " . prettyHex($fileLength) ."\n");
 
 
@@ -415,10 +421,25 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
         writeText("/$locno\n");
         foreach($connections as $direction=>$locno2)
         {
+            $extraLabel = '';
+            if ($v3code)
+            {
+                $blockable = false;
+                if ($direction & 0x80) 
+                {
+                    $blockable = true;
+                    $blocked = false;
+                    if ($direction & 0x40) $blocked = true;
+                }
+                $extraLabel = '';
+                if ($blockable && $blocked) $extraLabel = ' BLOCKED';
+                else if ($blockable) $extraLabel = ' UNBLOCKED';
+                $direction = $direction & 0x3F;
+            }
             if (isset($VOC[0][$direction])) $word = $VOC[0][$direction][0];
             else if ((isset($VOC[2][$direction])) && ($direction<MAX_DIRECTION)) $word = $VOC[2][$direction][0];
             else $word = "??[$direction]";
-            writeText("$word $locno2\n");
+            writeText("$word $locno2$extraLabel\n");
         }
     }
 
@@ -485,11 +506,13 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
                 if ($condactNum) writeText("                ");
                 $opcode = $condactData['opcode'];
                 
+                
                 $paramString = '';
                 for($i=0;$i<sizeof($condactData['params']);$i++)
                 {
                     $param = $condactData['params'][$i];
                     $indirection = $condactData['indirection'];
+                    $indirection2 = $condactData['indirection2'];
 
                     // If it's a condact with vocabulary parameter (NOUN2, PREPE etc.) replace number it with the corresponding vocabulary word
                     if (isset($condactWithVocabularyParameter[$opcode][$i]) && isset($VOC[$condactWithVocabularyParameter[$opcode][$i]][$param][0])) 
@@ -507,6 +530,10 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
                         {
                             case MES_OPCODE:
                                 $param = '"' . $MTX[$param] . '"' . ' ; MES ' . $param;
+                                $opcode = MES_OPCODE;
+                                break;
+                            case MES2_OPCODE:
+                                $param = '"' . $MTX2[$param] . '"' . ' ; MES2 ' . $param;
                                 $opcode = MES_OPCODE;
                                 break;
                             case MESSAGE_OPCODE:
@@ -549,9 +576,13 @@ function generateDSF($data, $inlineMessages, $maluva, $dumpTokens, $objectIdenfi
 
 
                     if (($indirection) && ($i==0)) $param = "@" . $param;
+                    if (($indirection2) && ($i==1)) $param = "@" . $param;
                     $paramString .= "$param ";
                 }
-                $mnemonic = $condacts[$opcode][1];
+                $prefixed = ($opcode & 512) == 512;
+
+                if (!$prefixed) $mnemonic = $condacts[$opcode][1];
+                else $mnemonic = $prefixedCondacts[$opcode-512][1];
 
                 // If using Maluva, replace EXTERN calls with MALUVA pseudocondacts
                 if ($maluva && ($opcode == EXTERN_OPCODE))

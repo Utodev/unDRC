@@ -22,7 +22,7 @@ define('VERSION','1.0');
 // Header of the DDB files
 
 // POSITION  LENGTH    CONTAINS    
-// 0         1 byte    Seems to contain DAAD version number (1 for Aventura Original and Jabato, 1989, 2 for the rest)
+// 0         1 byte    DAAD version number
 // 1         1 byte    High nibble: target machine | Low nibble: target language
 // 2         1 byte    Always contains 95, not identified
 // 3         1 byte    Number of object descriptions
@@ -33,16 +33,24 @@ define('VERSION','1.0');
 // 8         2 bytes   Compressed text position
 // 10        2 bytes   Process list position
 // 12        2 bytes   Objects lookup list position
-// 14        2 bytes   Locations lookup lits position
-// 16        2 bytes   User messages lookup lits position
-// 18        2 bytes   System messages lookup lits position
-// 20        2 bytes   Connections lookup lits position
+// 14        2 bytes   Locations lookup list position
+// 16        2 bytes   User messages lookup list position
+// 18        2 bytes   System messages lookup list position
+// 20        2 bytes   Connections lookup list position
 // 22        2 bytes   Vocabulary  
 // 24        2 bytes   Objects "initialy at" list position
 // 26        2 bytes   Object names positions
 // 28        2 bytes   Object weight and container/wearable attributes
 // 30        2 bytes   Extra object attributes 
 // 32        2 bytes   File length 
+
+// For DAAD V3:
+
+// 30        2 bytes   Extra object attributes 
+// 32        1 byte    Number of messages in secondary message table (MTX2)
+// 33        2 bytes   Secondary user messages lookup list position
+// 35        2 bytes   File length 
+
 
 // GLOBAL CONTANTS
 
@@ -107,135 +115,152 @@ $daad_to_iso8859_15 = array(
 
 
 $condacts = array(
-    array(1,'AT     '), //   0 $00
-    array(1,'NOTAT  '), //   1 $01
-    array(1,'ATGT   '), //   2 $$02
-    array(1,'ATLT   '), //   3 $03
-    array(1,'PRESENT'), //   4 $04
-    array(1,'ABSENT '), //   5 $05
-    array(1,'WORN   '), //   6 $06
-    array(1,'NOTWORN'), //   7 $07
-    array(1,'CARRIED'), //   8 $08
-    array(1,'NOTCARR'), //   9 $09
-    array(1,'CHANCE '), //  10 $0A
-    array(1,'ZERO   '), //  11 $0B
-    array(1,'NOTZERO'), //  12 $0C
-    array(2,'EQ     '), //  13 $0D
-    array(2,'GT     '), //  14 $0E
-    array(2,'LT     '), //  15 $0F
-    array(1,'ADJECT1'), //  16 $10
-    array(1,'ADVERB '), //  17 $11
-    array(2,'SFX    '), //  18 $12
-    array(1,'DESC   '), //  19 $13
-    array(0,'QUIT   '), //  20 $14
-    array(0,'END    '), //  21 $15
-    array(0,'DONE   '), //  22 $16
-    array(0,'OK     '), //  23 $17
-    array(0,'ANYKEY '), //  24 $18
-    array(1,'SAVE   '), //  25 $19
-    array(1,'LOAD   '), //  26 $1A
-    array(1,'DPRINT '), //  27 * $1B
-    array(1,'DISPLAY'), //  28 * $1C
-    array(0,'CLS    '), //  29 $1D
-    array(0,'DROPALL'), //  30 $1E
-    array(0,'AUTOG  '), //  31 $1F
-    array(0,'AUTOD  '), //  32 $20
-    array(0,'AUTOW  '), //  33 $21
-    array(0,'AUTOR  '), //  34 $22
-    array(1,'PAUSE  '), //  35 $23
-    array(2,'SYNONYM'), //  36 * $24
-    array(1,'GOTO   '), //  37 $25
-    array(1,'MESSAGE'), //  38 $26
-    array(1,'REMOVE '), //  39 $27
-    array(1,'GET    '), //  40 $28
-    array(1,'DROP   '), //  41 $29
-    array(1,'WEAR   '), //  42 $2A
-    array(1,'DESTROY'), //  43 $2B
-    array(1,'CREATE '), //  44 $2C
-    array(2,'SWAP   '), //  45 $2D
-    array(2,'PLACE  '), //  46 $2E
-    array(1,'SET    '), //  47 $2F
-    array(1,'CLEAR  '), //  48 $30
-    array(2,'PLUS   '), //  49 $31
-    array(2,'MINUS  '), //  50 $32
-    array(2,'LET    '), //  51 $33
-    array(0,'NEWLINE'), //  52 $34
-    array(1,'PRINT  '), //  53 $35
-    array(1,'SYSMESS'), //  54 $36
-    array(2,'ISAT   '), //  55 $37
-    array(1,'SETCO  '), //  56 $38 COPYOF in old games 
-    array(0,'SPACE  '), //  57 $39 COPYOO in old games
-    array(1,'HASAT  '), //  58 $3A COPYFO in old games
-    array(1,'HASNAT '), //  59 $3B COPYFF in old games
-    array(0,'LISTOBJ'), //  60 $3C
-    array(2,'EXTERN '), //  61 $3D
-    array(0,'RAMSAVE'), //  62 $3E
-    array(1,'RAMLOAD'), //  63 $3F
-    array(2,'BEEP   '), //  64 $40
-    array(1,'PAPER  '), //  65 $41
-    array(1,'INK    '), //  66 $42
-    array(1,'BORDER '), //  67 $43
-    array(1,'PREP   '), //  68 $44
-    array(1,'NOUN2  '), //  69 $45
-    array(1,'ADJECT2'), //  70 $46
-    array(2,'ADD    '), //  71 $47
-    array(2,'SUB    '), //  72 $48
-    array(1,'PARSE  '), //  73 $49
-    array(1,'LISTAT '), //  74 $4A
-    array(1,'PROCESS'), //  75 $4B
-    array(2,'SAME   '), //  76 $4C
-    array(1,'MES    '), //  77 $4D
-    array(1,'WINDOW '), //  78 $4E
-    array(2,'NOTEQ  '), //  79 $4F
-    array(2,'NOTSAME'), //  80 $50
-    array(1,'MODE   '), //  81 $51
-    array(2,'WINAT  '), //  82 $52
-    array(2,'TIME   '), //  83 $53
-    array(1,'PICTURE'), //  84 $54
-    array(1,'DOALL  '), //  85 $55
-    array(1,'MOUSE  '), //  86 $56
-    array(2,'GFX    '), //  87 $57
-    array(2,'ISNOTAT'), //  88 $58
-    array(2,'WEIGH  '), //  89 $59
-    array(2,'PUTIN  '), //  90 $5A
-    array(2,'TAKEOUT'), //  91 $5B
-    array(0,'NEWTEXT'), //  92 $5C
-    array(2,'ABILITY'), //  93 $5D
-    array(1,'WEIGHT '), //  94 $5E
-    array(1,'RANDOM '), //  95 $5F
-    array(2,'INPUT  '), //  96 $60
-    array(0,'SAVEAT '), //  97 $61
-    array(0,'BACKAT '), //  98 $62
-    array(2,'PRINTAT'), //  99 $63
-    array(0,'WHATO  '), // 100 $64
-    array(1,'CALL   '), // 101 $65
-    array(1,'PUTO   '), // 102 $66
-    array(0,'NOTDONE'), // 103 $67
-    array(1,'AUTOP  '), // 104 $68
-    array(1,'AUTOT  '), // 105 $69
-    array(1,'MOVE   '), // 106 $6A
-    array(2,'WINSIZE'), // 107 $6B
-    array(0,'REDO   '), // 108 $6C
-    array(0,'CENTRE '), // 109 $6D
-    array(1,'EXIT   '), // 110 $6E
-    array(0,'INKEY  '), // 111 $6F
-    array(2,'BIGGER '), // 112 $70
-    array(2,'SMALLER'), // 113 $71
-    array(0,'ISDONE '), // 114 $72
-    array(0,'ISNDONE'), // 115 $73
-    array(1,'SKIP   '), // 116 $74
-    array(0,'RESTART'), // 117 $75
-    array(1,'TAB    '), // 118 $76
-    array(2,'COPYOF '), // 119 $77
-    array(0,'dumb   '), // 120 $78 (according DAAD manual, internal)
-    array(2,'COPYOO '), // 121 $79 
-    array(0,'dumb   '), // 122 $7A (according DAAD manual, internal)
-    array(2,'COPYFO '), // 123 $7B
-    array(0,'dumb   '), // 124 $7C (according DAAD manual, internal)
-    array(2,'COPYFF '), // 125 $7D
-    array(2,'COPYBF '), // 126 $7E
-    array(0,'RESET  ')  // 127 $7F
-    );
+      array(1,'AT       '), //   0 $00
+      array(1,'NOTAT    '), //   1 $01
+      array(1,'ATGT     '), //   2 $$02
+      array(1,'ATLT     '), //   3 $03
+      array(1,'PRESENT  '), //   4 $04
+      array(1,'ABSENT   '), //   5 $05
+      array(1,'WORN     '), //   6 $06
+      array(1,'NOTWORN  '), //   7 $07
+      array(1,'CARRIED  '), //   8 $08
+      array(1,'NOTCARR  '), //   9 $09
+      array(1,'CHANCE   '), //  10 $0A
+      array(1,'ZERO     '), //  11 $0B
+      array(1,'NOTZERO  '), //  12 $0C
+      array(2,'EQ       '), //  13 $0D
+      array(2,'GT       '), //  14 $0E
+      array(2,'LT       '), //  15 $0F
+      array(1,'ADJECT1  '), //  16 $10
+      array(1,'ADVERB   '), //  17 $11
+      array(2,'SFX      '), //  18 $12
+      array(1,'DESC     '), //  19 $13
+      array(0,'QUIT     '), //  20 $14
+      array(0,'END      '), //  21 $15
+      array(0,'DONE     '), //  22 $16
+      array(0,'OK       '), //  23 $17
+      array(0,'ANYKEY   '), //  24 $18
+      array(1,'SAVE     '), //  25 $19
+      array(1,'LOAD     '), //  26 $1A
+      array(1,'DPRINT   '), //  27 * $1B
+      array(1,'DISPLAY  '), //  28 * $1C
+      array(0,'CLS      '), //  29 $1D
+      array(0,'DROPALL  '), //  30 $1E
+      array(0,'AUTOG    '), //  31 $1F
+      array(0,'AUTOD    '), //  32 $20
+      array(0,'AUTOW    '), //  33 $21
+      array(0,'AUTOR    '), //  34 $22
+      array(1,'PAUSE    '), //  35 $23
+      array(2,'SYNONYM  '), //  36 * $24
+      array(1,'GOTO     '), //  37 $25
+      array(1,'MESSAGE  '), //  38 $26
+      array(1,'REMOVE   '), //  39 $27
+      array(1,'GET      '), //  40 $28
+      array(1,'DROP     '), //  41 $29
+      array(1,'WEAR     '), //  42 $2A
+      array(1,'DESTROY  '), //  43 $2B
+      array(1,'CREATE   '), //  44 $2C
+      array(2,'SWAP     '), //  45 $2D
+      array(2,'PLACE    '), //  46 $2E
+      array(1,'SET      '), //  47 $2F
+      array(1,'CLEAR    '), //  48 $30
+      array(2,'PLUS     '), //  49 $31
+      array(2,'MINUS    '), //  50 $32
+      array(2,'LET      '), //  51 $33
+      array(0,'NEWLINE  '), //  52 $34
+      array(1,'PRINT    '), //  53 $35
+      array(1,'SYSMESS  '), //  54 $36
+      array(2,'ISAT     '), //  55 $37
+      array(1,'SETCO    '), //  56 $38 COPYOF in old games 
+      array(0,'SPACE    '), //  57 $39 COPYOO in old games
+      array(1,'HASAT    '), //  58 $3A COPYFO in old games
+      array(1,'HASNAT   '), //  59 $3B COPYFF in old games
+      array(0,'LISTOBJ  '), //  60 $3C
+      array(2,'EXTERN   '), //  61 $3D
+      array(0,'RAMSAVE  '), //  62 $3E
+      array(1,'RAMLOAD  '), //  63 $3F
+      array(2,'BEEP     '), //  64 $40
+      array(1,'PAPER    '), //  65 $41
+      array(1,'INK      '), //  66 $42
+      array(1,'BORDER   '), //  67 $43
+      array(1,'PREP     '), //  68 $44
+      array(1,'NOUN2    '), //  69 $45
+      array(1,'ADJECT2  '), //  70 $46
+      array(2,'ADD      '), //  71 $47
+      array(2,'SUB      '), //  72 $48
+      array(1,'PARSE    '), //  73 $49
+      array(1,'LISTAT   '), //  74 $4A
+      array(1,'PROCESS  '), //  75 $4B
+      array(2,'SAME     '), //  76 $4C
+      array(1,'MES      '), //  77 $4D
+      array(1,'WINDOW   '), //  78 $4E
+      array(2,'NOTEQ    '), //  79 $4F
+      array(2,'NOTSAME  '), //  80 $50
+      array(1,'MODE     '), //  81 $51
+      array(2,'WINAT    '), //  82 $52
+      array(2,'TIME     '), //  83 $53
+      array(1,'PICTURE  '), //  84 $54
+      array(1,'DOALL    '), //  85 $55
+      array(1,'MOUSE    '), //  86 $56
+      array(2,'GFX      '), //  87 $57
+      array(2,'ISNOTAT  '), //  88 $58
+      array(2,'WEIGH    '), //  89 $59
+      array(2,'PUTIN    '), //  90 $5A
+      array(2,'TAKEOUT  '), //  91 $5B
+      array(0,'NEWTEXT  '), //  92 $5C
+      array(2,'ABILITY  '), //  93 $5D
+      array(1,'WEIGHT   '), //  94 $5E
+      array(1,'RANDOM   '), //  95 $5F
+      array(2,'INPUT    '), //  96 $60
+      array(0,'SAVEAT   '), //  97 $61
+      array(0,'BACKAT   '), //  98 $62
+      array(2,'PRINTAT  '), //  99 $63
+      array(0,'WHATO    '), // 100 $64
+      array(1,'CALL     '), // 101 $65
+      array(1,'PUTO     '), // 102 $66
+      array(0,'NOTDONE  '), // 103 $67
+      array(1,'AUTOP    '), // 104 $68
+      array(1,'AUTOT    '), // 105 $69
+      array(1,'MOVE     '), // 106 $6A
+      array(2,'WINSIZE  '), // 107 $6B
+      array(0,'REDO     '), // 108 $6C
+      array(0,'CENTRE   '), // 109 $6D
+      array(1,'EXIT     '), // 110 $6E
+      array(0,'INKEY    '), // 111 $6F
+      array(2,'BIGGER   '), // 112 $70
+      array(2,'SMALLER  '), // 113 $71
+      array(0,'ISDONE   '), // 114 $72
+      array(0,'ISNDONE  '), // 115 $73
+      array(1,'SKIP     '), // 116 $74
+      array(0,'RESTART  '), // 117 $75
+      array(1,'TAB      '), // 118 $76
+      array(2,'COPYOF   '), // 119 $77
+      array(0,'dumb     '), // 120 $78 (according DAAD manual, internal) // PREFIX for DAAD V3
+      array(2,'COPYOO   '), // 121 $79 
+      array(0,'dumb     '), // 122 $7A (according DAAD manual, internal) // SETP2 for DAAD V3
+      array(2,'COPYFO   '), // 123 $7B
+      array(0,'dumb     '), // 124 $7C (according DAAD manual, internal) // SETP3 for DAAD V3
+      array(2,'COPYFF   '), // 125 $7D
+      array(2,'COPYBF   '), // 126 $7E
+      array(0,'RESET    ')  // 127 $7F
+ );
+
+$prefixedCondacts = array(
+      array(2,'BSET     '), //   0 $00
+      array(2,'BCLEAR   '), //   1 $01
+      array(2,'BTOGGLE  '), //   2 $02
+      array(2,'BZERO    '), //   3 $03
+      array(2,'BNOTZERO '), //  4 $04
+      array(1,'SELECT   '), //  5 $05
+      array(1,'OPTION   '), //  6 $06
+      array(1,'CHOICE   '), //  7 $07
+      array(1,'TOGGLECON'), //  8 $08
+      array(1,'MES2     '), //  9 $09
+); 
+    
+define('PREFIX_OPCODE', 120);
+define('SETP2_OPCODE',  122);
+define('SETP3_OPCODE',  124);
     
 
 // GLOBAL VARS
@@ -251,7 +276,7 @@ $dumpTokens = false;
 $DDBoffset = 0;
 
 // Sections
-$HEADER = $CTL = $TOC = $VOC = $LTX =  $MTX = $STX =  $OTX = $OBJ = $CON = $PRO = array();
+$HEADER = $CTL = $TOC = $VOC = $LTX =  $MTX = $MTX2 = $STX =  $OTX = $OBJ = $CON = $PRO = array();
 
 
 // DDB read functions
@@ -299,11 +324,13 @@ function readDDB($filename)
 }
 
 
-function readByte()
+
+function readByte($verbose=false)
 {
     global $data, $dataPTR;
     $byte = ord(substr($data, $dataPTR, 1));
     $dataPTR++;
+    if ($verbose) echo "[RB: $byte]";
     return $byte;
 }
 
@@ -361,13 +388,14 @@ function getTargetByMachineID($id)
 
 function getMessage($opcode, $id)
 {
-    global $MTXData, $STXData, $LTXData;
+    global $MTXData, $STXData, $LTXData, $MTX2Data;
     switch($opcode)
     {
         case 38: 
         case 77: return $MTXData[$id];
         case 54: return $STXData[$id];
         case 19; return $LTXData[$id];
+        case 512 + 9 : $MTX2Data[$id];
         default: return '';                
     }
 
@@ -452,9 +480,7 @@ function error($msg)
 
 //-------------------------------------------------------------------------------------
 // Main
-
-
-echo "unDRC 1.0\n";
+echo "unDRC 1.1\n";
 if ($argc<2) syntax();
 
 for ($i=2; $i<$argc; $i++)
@@ -488,8 +514,9 @@ $data = readDDB($filename, $auto);
 
 // Check header
 
-$magic = readByte();
-if ($magic!=2) error("File $filename is not a valid DDB 2.0 file. DDB version is not 2.");
+$version = readByte();
+if ($version<2) error("File $filename is not a valid DDB 2.0 or 3.0 file. DDB version is $version.");
+$v3code = $version==3;
 $machineLang = readByte();
 $target = $machineLang >> 4;
 $lang = $machineLang & 0x0F;
@@ -523,11 +550,16 @@ $posInitialyAt = readWord();
 $posObjectsVocabulary = readWord();
 $posObjectAttributes = readWord();
 $posObjectUserAttributes = readWord();
+if ($v3code)
+{
+  $numUser2Messages = readByte();
+  $posUser2Messages = readWord();
+}
 $fileLength = readWord();
 
 
 $HEADER = array();
-$HEADER['magic'] = $magic;
+$HEADER['version'] = $version;
 $HEADER['machineLang'] = $machineLang;
 $HEADER['target'] = $target;
 $HEADER['lang'] = $lang;
@@ -553,12 +585,12 @@ $HEADER['posInitialyAt'] = $posInitialyAt;
 $HEADER['posObjectsVocabulary'] = $posObjectsVocabulary;
 $HEADER['posObjectAttributes'] = $posObjectAttributes;
 $HEADER['posObjectUserAttributes'] = $posObjectUserAttributes;
+if ($v3code)
+{
+  $HEADER['numUser2Messages'] = $numUser2Messages;
+  $HEADER['posUser2Messages'] = $posUser2Messages;
+}
 $HEADER['fileLength'] = $fileLength;
-
- 
-
-
-
 
 
 // TOKENS
@@ -598,7 +630,6 @@ while (1)
     $c = $daad_to_iso8859_15[$c];
     $currentWord .= chr($c); 
   }
-
   $id  = readByte();
   $wordType = readByte();
   $wordTypeText = $wordTypes[$wordType];
@@ -616,8 +647,10 @@ $STX = getTextSection($posSystemMessages, $numSystemMessages);
 $MTX = getTextSection($posUserMessages, $numUserMessages);
 $LTX = getTextSection($posLocations, $numLocs);
 $OTX = getTextSection($posObjects, $numObjs);
+if ($v3code) $MTX2 = getTextSection($posUser2Messages, $numUser2Messages);
 
 
+// CONNECTIONS
 
  
  for ($i = 0; $i < $numLocs; $i++)
@@ -627,11 +660,7 @@ $OTX = getTextSection($posObjects, $numObjs);
    $currentConnectionsPosition = readWord();
    seek($currentConnectionsPosition);
    while (($c = readByte()) != 255)
-   {
-     if (isset($VOC[0][$c])) $word = $VOC[0][$c][0];
-     else if ((isset($VOC[2][$c])) && ($c<20)) $word = $VOC[2][$c][0];
      $CON[$i][$c] = readByte();
-   } 
  }
 
  // OBJECT DATA
@@ -668,6 +697,7 @@ $OTX = getTextSection($posObjects, $numObjs);
 
  // PROCESSES
  $PRO = array();
+ 
  for ($i=0;$i<$numProcesses;$i++)
  {
 
@@ -695,6 +725,22 @@ $OTX = getTextSection($posObjects, $numObjs);
      $PRO[$i][$entry]['condacts'] = array();
      while ($c != 255)
      {
+      $secondIndirection = false;
+      if ($v3code && (($c == SETP2_OPCODE) || ($c == SETP3_OPCODE)))
+      {
+        
+        $secondIndirection = readByte();
+        $c = readByte();
+      }
+
+      $prefixed = false;
+      if ($v3code && ($c == PREFIX_OPCODE))
+      {
+        $prefixed = true;
+        
+        $c = readByte();
+      }
+       
        $PRO[$i][$entry]['condacts'][$condactNum] = array();
        $indirection = 0;
        if ($c > 127)
@@ -702,21 +748,33 @@ $OTX = getTextSection($posObjects, $numObjs);
          $c -= 128;
          $indirection = 1;
        }
-       if ($c >= 128) error("Unknown condact code: [$c] at entry $entry of process $i\n");
+       if ($c >= 128) error("Unknown condact code: [$c] at entry $entry of process $i ".($prefixed?"( prefixed)":"") ."\n");
        
        $PRO[$i][$entry]['condacts'][$condactNum]['indirection'] = $indirection;
 
        $opcode = $c;
+       if ($prefixed) $opcode+=512; // Add 512 to opcode to mark it as prefixed 
        
+
        $PRO[$i][$entry]['condacts'][$condactNum]['opcode'] = $opcode;
        
 
        $PRO[$i][$entry]['condacts'][$condactNum]['params'] = array();
-       for ($j = 0; $j < $condacts[$opcode][0]; $j++)
+       if (!$prefixed)  $numParams = $condacts[$opcode][0];
+                        else $numParams = $prefixedCondacts[$opcode-512][0];
+       for ($j = 0; $j < $numParams; $j++)
        {
          $val = readByte();
          $PRO[$i][$entry]['condacts'][$condactNum]['params'][$j] = $val;
        }
+
+       $PRO[$i][$entry]['condacts'][$condactNum]['indirection2'] = 0;
+       if ($secondIndirection) 
+       {
+        $PRO[$i][$entry]['condacts'][$condactNum]['params'][1] = $secondIndirection;
+        $PRO[$i][$entry]['condacts'][$condactNum]['indirection2'] = 1;
+       }
+       
 
        if (($maluva) && ($opcode==EXTERN_OPCODE))
        {
@@ -728,6 +786,9 @@ $OTX = getTextSection($posObjects, $numObjs);
 
        }
 
+
+       $prefixed = false;
+       $secondIndirection = false;
        $c = readByte();
        if (in_array($opcode, $terminatorOpcodes) && ($c!=255)) // If compiled with DRC, there is a chance there is no terminator after one of this codes
        {
@@ -737,8 +798,6 @@ $OTX = getTextSection($posObjects, $numObjs);
        $condactNum++;
      }
    }
-
-
 
  }  
 
@@ -757,6 +816,7 @@ $OTX = getTextSection($posObjects, $numObjs);
    $dataOutput['LTX'] = $LTX;
    $dataOutput['OTX'] = $OTX;
    $dataOutput['MTX'] = $MTX;
+   if ($v3code) $dataOutput['MTX2'] = $MTX2;
    $dataOutput['CON'] = $CON;
    
   file_put_contents('dataOutput.txt', var_export($dataOutput, true));
